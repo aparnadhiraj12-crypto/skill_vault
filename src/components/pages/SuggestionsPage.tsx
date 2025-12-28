@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Sparkles, User, CheckCircle2, AlertCircle, ArrowRight, Lightbulb } from 'lucide-react';
+import { useAnalysisStore } from '@/store/analysisStore';
 
 type SuggestionType = 'ai' | 'manual';
 
@@ -21,57 +22,26 @@ export default function SuggestionsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<SuggestionType>('ai');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const { analysis } = useAnalysisStore();
 
   useEffect(() => {
-    const data = sessionStorage.getItem('uploadedCreative');
-    if (!data) {
+    if (!analysis) {
       navigate('/upload');
       return;
     }
 
-    // Generate sample suggestions
-    const aiSuggestions: Suggestion[] = [
-      {
-        id: '1',
-        type: 'ai',
-        category: 'Compliance',
-        severity: 'critical',
-        title: 'Add Legal Disclaimer',
-        description: 'Your creative is missing required legal text. Add disclaimer at bottom with minimum 8pt font size.',
+    // Use AI-generated suggestions from analysis
+    const aiSuggestions = analysis.suggestions
+      .filter(s => s.type === 'ai')
+      .map(s => ({
+        ...s,
         applied: false,
-      },
-      {
-        id: '2',
-        type: 'ai',
-        category: 'Design',
-        severity: 'warning',
-        title: 'Improve Text Contrast',
-        description: 'Text contrast ratio is 3.2:1. Increase to 4.5:1 for WCAG AA compliance by darkening text or lightening background.',
-        applied: false,
-      },
-      {
-        id: '3',
-        type: 'ai',
-        category: 'Optimization',
-        severity: 'info',
-        title: 'Optimize Call-to-Action',
-        description: 'CTA button could be more prominent. Consider increasing size by 20% and using higher contrast color.',
-        applied: false,
-      },
-      {
-        id: '4',
-        type: 'ai',
-        category: 'Brand',
-        severity: 'warning',
-        title: 'Logo Placement',
-        description: 'Brand logo should be in top-left corner per retailer guidelines. Current placement: center.',
-        applied: false,
-      },
-    ];
+      }));
 
+    // Add some manual suggestions based on best practices
     const manualSuggestions: Suggestion[] = [
       {
-        id: '5',
+        id: 'manual-1',
         type: 'manual',
         category: 'Content',
         severity: 'info',
@@ -80,7 +50,7 @@ export default function SuggestionsPage() {
         applied: false,
       },
       {
-        id: '6',
+        id: 'manual-2',
         type: 'manual',
         category: 'Visual',
         severity: 'info',
@@ -91,7 +61,7 @@ export default function SuggestionsPage() {
     ];
 
     setSuggestions([...aiSuggestions, ...manualSuggestions]);
-  }, [navigate]);
+  }, [analysis, navigate]);
 
   const toggleSuggestion = (id: string) => {
     setSuggestions(prev =>

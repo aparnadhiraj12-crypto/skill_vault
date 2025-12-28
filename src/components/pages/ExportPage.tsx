@@ -3,47 +3,46 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Download, Share2, FileText, CheckCircle2, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Download, Share2, FileText, CheckCircle2, TrendingUp } from 'lucide-react';
+import { useAnalysisStore } from '@/store/analysisStore';
 
 export default function ExportPage() {
   const navigate = useNavigate();
-  const [creativeData, setCreativeData] = useState<any>(null);
-  const [confidenceScore, setConfidenceScore] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const { analysis, retailerName, placementName } = useAnalysisStore();
 
   useEffect(() => {
-    const data = sessionStorage.getItem('uploadedCreative');
-    if (!data) {
+    if (!analysis) {
       navigate('/upload');
       return;
     }
-    setCreativeData(JSON.parse(data));
-    
-    // Simulate confidence score
-    const score = Math.floor(Math.random() * 30) + 70;
-    setConfidenceScore(score);
-  }, [navigate]);
+  }, [analysis, navigate]);
+
+  if (!analysis) {
+    return null;
+  }
+
+  const confidenceScore = analysis.riskAnalysis.score;
 
   const handleDownload = async (format: 'pdf' | 'json') => {
     setIsExporting(true);
     
-    // Simulate export processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Create download
+    // Create comprehensive report
     const reportData = {
-      fileName: creativeData?.fileName,
-      confidenceScore,
-      timestamp: new Date().toISOString(),
-      metrics: {
-        compliance: 94,
-        attention: 87,
-        readability: 78,
+      metadata: {
+        retailer: retailerName,
+        placement: placementName,
+        timestamp: new Date().toISOString(),
+        confidenceScore: analysis.riskAnalysis.score,
       },
-      suggestions: {
-        applied: 3,
-        total: 6,
+      analysis: {
+        designMetrics: analysis.designMetrics,
+        complianceChecks: analysis.complianceChecks,
+        riskAnalysis: analysis.riskAnalysis,
       },
+      suggestions: analysis.suggestions,
+      placementSimulations: analysis.placementSimulations,
+      heatmapData: analysis.heatmapData,
     };
 
     const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
@@ -62,7 +61,7 @@ export default function ExportPage() {
       try {
         await navigator.share({
           title: 'Creative Validation Report',
-          text: `Validation Score: ${confidenceScore}/100`,
+          text: `Validation Score: ${confidenceScore}/100 - ${analysis.riskAnalysis.label}`,
           url: window.location.href,
         });
       } catch (err) {
@@ -74,10 +73,6 @@ export default function ExportPage() {
       alert('Link copied to clipboard!');
     }
   };
-
-  if (!creativeData) {
-    return null;
-  }
 
   const getConfidenceColor = (score: number) => {
     if (score >= 90) return 'limegreen';
@@ -91,13 +86,6 @@ export default function ExportPage() {
     if (score >= 75) return 'Good Confidence';
     if (score >= 60) return 'Moderate Confidence';
     return 'Low Confidence';
-  };
-
-  const getRecommendation = (score: number) => {
-    if (score >= 90) return 'Your creative is ready for submission with high confidence.';
-    if (score >= 75) return 'Your creative is likely to pass review. Consider applying remaining suggestions.';
-    if (score >= 60) return 'Review and apply critical suggestions before submission.';
-    return 'Significant improvements needed. Apply all suggestions and re-validate.';
   };
 
   return (
@@ -141,7 +129,7 @@ export default function ExportPage() {
                   Validation Confidence
                 </h2>
                 <p className="font-paragraph text-sm text-softgray">
-                  Based on simulation results and applied suggestions
+                  Based on AI analysis and design metrics
                 </p>
               </div>
 
@@ -155,28 +143,42 @@ export default function ExportPage() {
                   </p>
                 </div>
                 <p className="font-paragraph text-base text-softgray max-w-2xl mx-auto">
-                  {getRecommendation(confidenceScore)}
+                  {analysis.riskAnalysis.recommendation}
                 </p>
               </div>
 
               {/* Metrics Summary */}
-              <div className="grid grid-cols-3 gap-6 max-w-3xl mx-auto">
+              <div className="grid grid-cols-2 gap-6 max-w-3xl mx-auto">
                 <div className="bg-primary/50 p-6">
-                  <div className="font-heading text-4xl font-black text-limegreen mb-2">94</div>
+                  <div className="font-heading text-4xl font-black text-limegreen mb-2">
+                    {analysis.designMetrics.compliance}
+                  </div>
                   <p className="font-paragraph text-xs uppercase tracking-wider text-softgray">
                     Compliance
                   </p>
                 </div>
                 <div className="bg-primary/50 p-6">
-                  <div className="font-heading text-4xl font-black text-brightblue mb-2">87</div>
+                  <div className="font-heading text-4xl font-black text-brightblue mb-2">
+                    {analysis.designMetrics.attention}
+                  </div>
                   <p className="font-paragraph text-xs uppercase tracking-wider text-softgray">
                     Attention
                   </p>
                 </div>
                 <div className="bg-primary/50 p-6">
-                  <div className="font-heading text-4xl font-black text-pastelpink mb-2">78</div>
+                  <div className="font-heading text-4xl font-black text-pastelpink mb-2">
+                    {analysis.designMetrics.readability}
+                  </div>
                   <p className="font-paragraph text-xs uppercase tracking-wider text-softgray">
                     Readability
+                  </p>
+                </div>
+                <div className="bg-primary/50 p-6">
+                  <div className="font-heading text-4xl font-black text-limegreen mb-2">
+                    {analysis.designMetrics.brandConsistency}
+                  </div>
+                  <p className="font-paragraph text-xs uppercase tracking-wider text-softgray">
+                    Brand
                   </p>
                 </div>
               </div>

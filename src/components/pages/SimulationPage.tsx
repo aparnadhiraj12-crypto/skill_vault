@@ -4,29 +4,31 @@ import { motion } from 'framer-motion';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Eye, Layout, Flame, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useAnalysisStore } from '@/store/analysisStore';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 type SimulationMode = 'reviewer' | 'placement' | 'heatmap' | 'risk';
 
 export default function SimulationPage() {
   const navigate = useNavigate();
   const [activeMode, setActiveMode] = useState<SimulationMode>('reviewer');
-  const [creativeData, setCreativeData] = useState<any>(null);
-  const [riskScore, setRiskScore] = useState(0);
+  const { analysis, isLoading } = useAnalysisStore();
 
   useEffect(() => {
-    const data = sessionStorage.getItem('uploadedCreative');
-    if (!data) {
+    if (!analysis && !isLoading) {
       navigate('/upload');
-      return;
     }
-    setCreativeData(JSON.parse(data));
-    
-    // Simulate risk score calculation
-    const score = Math.floor(Math.random() * 30) + 70; // 70-100
-    setRiskScore(score);
-  }, [navigate]);
+  }, [analysis, isLoading, navigate]);
 
-  if (!creativeData) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-primary flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!analysis) {
     return null;
   }
 
@@ -75,6 +77,8 @@ export default function SimulationPage() {
     return 'Needs Work';
   };
 
+  const riskScore = analysis.riskAnalysis.score;
+
   return (
     <div className="min-h-screen bg-primary">
       <Header />
@@ -99,7 +103,7 @@ export default function SimulationPage() {
               <span className="text-limegreen">Dashboard</span>
             </h1>
             <p className="font-paragraph text-xl text-softgray max-w-3xl">
-              Analyzing: {creativeData.fileName}
+              AI-powered analysis of your creative
             </p>
           </motion.div>
 
@@ -155,28 +159,27 @@ export default function SimulationPage() {
 
               <div className="bg-softgray aspect-video flex items-center justify-center relative overflow-hidden">
                 {activeMode === 'reviewer' && (
-                  <div className="absolute inset-0 p-8">
+                  <div className="absolute inset-0 p-8 overflow-y-auto">
                     <div className="bg-primary/90 p-6 max-w-md">
                       <h3 className="font-heading text-xl font-bold text-limegreen mb-4">
                         Compliance Checklist
                       </h3>
                       <div className="space-y-3">
-                        {[
-                          { item: 'Brand logo placement', status: 'pass' },
-                          { item: 'Text readability', status: 'pass' },
-                          { item: 'Color contrast', status: 'pass' },
-                          { item: 'Dimension requirements', status: 'pass' },
-                          { item: 'Legal disclaimers', status: 'warning' },
-                        ].map((check, i) => (
-                          <div key={i} className="flex items-center justify-between">
-                            <span className="font-paragraph text-sm text-primary-foreground">
-                              {check.item}
-                            </span>
-                            <span className={`font-paragraph text-xs font-semibold ${
-                              check.status === 'pass' ? 'text-limegreen' : 'text-pastelpink'
-                            }`}>
-                              {check.status === 'pass' ? '✓ PASS' : '⚠ CHECK'}
-                            </span>
+                        {analysis.complianceChecks.map((check, i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-paragraph text-sm text-primary-foreground flex-1">
+                                {check.item}
+                              </span>
+                              <span className={`font-paragraph text-xs font-semibold whitespace-nowrap ${
+                                check.status === 'pass' ? 'text-limegreen' : check.status === 'warning' ? 'text-pastelpink' : 'text-destructive'
+                              }`}>
+                                {check.status === 'pass' ? '✓ PASS' : check.status === 'warning' ? '⚠ CHECK' : '✗ FAIL'}
+                              </span>
+                            </div>
+                            <p className="font-paragraph text-xs text-softgray pl-2">
+                              {check.details}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -185,28 +188,69 @@ export default function SimulationPage() {
                 )}
 
                 {activeMode === 'placement' && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-softgray to-primary-foreground p-12">
-                    <div className="bg-primary p-4 max-w-sm mx-auto">
-                      <p className="font-paragraph text-xs text-brightblue mb-2">RETAIL CONTEXT</p>
-                      <div className="bg-limegreen h-48 flex items-center justify-center">
-                        <p className="font-heading text-2xl font-bold text-secondary-foreground">
-                          YOUR AD HERE
-                        </p>
-                      </div>
+                  <div className="absolute inset-0 p-8 overflow-y-auto">
+                    <div className="space-y-6">
+                      {analysis.placementSimulations.map((placement, idx) => (
+                        <div key={idx} className="bg-primary/90 p-6 max-w-md">
+                          <h4 className="font-heading text-lg font-bold text-limegreen mb-2">
+                            {placement.context}
+                          </h4>
+                          <p className="font-paragraph text-sm text-primary-foreground mb-3">
+                            {placement.description}
+                          </p>
+                          <p className="font-paragraph text-xs text-brightblue">
+                            💡 {placement.recommendation}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 {activeMode === 'heatmap' && (
-                  <div className="absolute inset-0 bg-gradient-to-br from-destructive/30 via-pastelpink/30 to-limegreen/30 flex items-center justify-center">
-                    <div className="text-center">
-                      <Flame className="w-24 h-24 text-destructive mx-auto mb-4" />
-                      <p className="font-heading text-2xl font-bold text-primary-foreground">
-                        Attention Analysis
-                      </p>
-                      <p className="font-paragraph text-sm text-softgray mt-2">
-                        Hotspots indicate high viewer focus
-                      </p>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative w-full h-full">
+                      {/* Heatmap visualization */}
+                      <svg className="w-full h-full" viewBox="0 0 100 100">
+                        {/* Background */}
+                        <rect width="100" height="100" fill="#1a1a1a" />
+                        
+                        {/* Heatmap zones */}
+                        {analysis.heatmapData.zones.map((zone, idx) => {
+                          const radius = (zone.intensity / 100) * 15;
+                          const opacity = zone.intensity / 100;
+                          const color = zone.intensity > 80 ? '#DF3131' : zone.intensity > 60 ? '#DDA0DD' : '#6A8EFF';
+                          
+                          return (
+                            <g key={idx}>
+                              <circle
+                                cx={zone.x}
+                                cy={zone.y}
+                                r={radius}
+                                fill={color}
+                                opacity={opacity * 0.6}
+                              />
+                              <circle
+                                cx={zone.x}
+                                cy={zone.y}
+                                r={radius * 0.6}
+                                fill={color}
+                                opacity={opacity * 0.3}
+                              />
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      
+                      {/* Legend */}
+                      <div className="absolute bottom-4 left-4 bg-primary/90 p-4 text-xs text-primary-foreground">
+                        <p className="font-heading font-bold mb-2">Focus Areas:</p>
+                        <ul className="space-y-1">
+                          {analysis.heatmapData.focusAreas.map((area, idx) => (
+                            <li key={idx}>• {area}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -220,8 +264,11 @@ export default function SimulationPage() {
                       <p className="font-heading text-3xl font-bold text-primary-foreground mb-2">
                         {getRiskLabel(riskScore)}
                       </p>
-                      <p className="font-paragraph text-sm text-softgray">
+                      <p className="font-paragraph text-sm text-softgray mb-6">
                         Confidence Score
+                      </p>
+                      <p className="font-paragraph text-base text-softgray max-w-md">
+                        {analysis.riskAnalysis.recommendation}
                       </p>
                     </div>
                   </div>
@@ -271,28 +318,37 @@ export default function SimulationPage() {
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="font-paragraph text-sm text-softgray">Compliance</span>
-                      <span className="font-paragraph text-sm font-semibold text-limegreen">94%</span>
+                      <span className="font-paragraph text-sm font-semibold text-limegreen">{analysis.designMetrics.compliance}%</span>
                     </div>
                     <div className="w-full bg-secondary/20 h-2">
-                      <div className="h-full bg-limegreen" style={{ width: '94%' }} />
+                      <div className="h-full bg-limegreen" style={{ width: `${analysis.designMetrics.compliance}%` }} />
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="font-paragraph text-sm text-softgray">Attention</span>
-                      <span className="font-paragraph text-sm font-semibold text-brightblue">87%</span>
+                      <span className="font-paragraph text-sm font-semibold text-brightblue">{analysis.designMetrics.attention}%</span>
                     </div>
                     <div className="w-full bg-secondary/20 h-2">
-                      <div className="h-full bg-brightblue" style={{ width: '87%' }} />
+                      <div className="h-full bg-brightblue" style={{ width: `${analysis.designMetrics.attention}%` }} />
                     </div>
                   </div>
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="font-paragraph text-sm text-softgray">Readability</span>
-                      <span className="font-paragraph text-sm font-semibold text-pastelpink">78%</span>
+                      <span className="font-paragraph text-sm font-semibold text-pastelpink">{analysis.designMetrics.readability}%</span>
                     </div>
                     <div className="w-full bg-secondary/20 h-2">
-                      <div className="h-full bg-pastelpink" style={{ width: '78%' }} />
+                      <div className="h-full bg-pastelpink" style={{ width: `${analysis.designMetrics.readability}%` }} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="font-paragraph text-sm text-softgray">Brand Consistency</span>
+                      <span className="font-paragraph text-sm font-semibold text-limegreen">{analysis.designMetrics.brandConsistency}%</span>
+                    </div>
+                    <div className="w-full bg-secondary/20 h-2">
+                      <div className="h-full bg-limegreen" style={{ width: `${analysis.designMetrics.brandConsistency}%` }} />
                     </div>
                   </div>
                 </div>

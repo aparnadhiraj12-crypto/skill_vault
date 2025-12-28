@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Header from '@/components/Header';
@@ -7,6 +7,8 @@ import { Upload, FileImage, CheckCircle2, ArrowRight } from 'lucide-react';
 import { BaseCrudService } from '@/integrations';
 import { AdPlacements, Retailers } from '@/entities';
 import { Image } from '@/components/ui/image';
+import { analyzeCreative } from '@/services/aiService';
+import { useAnalysisStore } from '@/store/analysisStore';
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -17,9 +19,10 @@ export default function UploadPage() {
   const [placements, setPlacements] = useState<AdPlacements[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const { setAnalysis, setLoading: setStoreLoading, setError, setUploadContext } = useAnalysisStore();
 
   // Load retailers and placements on mount
-  useState(() => {
+  useEffect(() => {
     const loadData = async () => {
       const { items: retailerItems } = await BaseCrudService.getAll<Retailers>('retailers');
       const { items: placementItems } = await BaseCrudService.getAll<AdPlacements>('adplacements');
@@ -27,7 +30,7 @@ export default function UploadPage() {
       setPlacements(placementItems.filter(p => p.isActive));
     };
     loadData();
-  });
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,20 +48,47 @@ export default function UploadPage() {
     }
 
     setIsLoading(true);
+    setStoreLoading(true);
     
-    // Simulate upload processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Store selection in sessionStorage for simulation page
-    sessionStorage.setItem('uploadedCreative', JSON.stringify({
-      fileName: selectedFile.name,
-      retailerId: selectedRetailer,
-      placementId: selectedPlacement,
-      previewUrl: previewUrl,
-    }));
+    try {
+      const retailer = retailers.find(r => r._id === selectedRetailer);
+      const placement = placements.find(p => p._id === selectedPlacement);
 
-    setIsLoading(false);
-    navigate('/simulation');
+      if (!retailer || !placement) {
+        setError('Invalid retailer or placement selection');
+        setIsLoading(false);
+        setStoreLoading(false);
+        return;
+      }
+
+      // Store upload context
+      setUploadContext({
+        file: selectedFile,
+        retailerId: selectedRetailer,
+        placementId: selectedPlacement,
+        retailerName: retailer.retailerName || '',
+        placementName: placement.placementName || '',
+      });
+
+      // Analyze creative with AI
+      const analysis = await analyzeCreative(
+        selectedFile,
+        selectedRetailer,
+        selectedPlacement,
+        retailer.retailerName || '',
+        placement.placementName || ''
+      );
+
+      setAnalysis(analysis);
+      setIsLoading(false);
+      setStoreLoading(false);
+      navigate('/simulation');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to analyze creative';
+      setError(errorMessage);
+      setIsLoading(false);
+      setStoreLoading(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -241,7 +271,7 @@ export default function UploadPage() {
                   className="w-full bg-limegreen hover:bg-limegreen/90 disabled:bg-softgray disabled:cursor-not-allowed text-secondary-foreground font-heading text-xl font-bold px-8 py-5 transition-all flex items-center justify-center gap-3 group"
                 >
                   {isLoading ? (
-                    'Processing...'
+                    'Analyzing with AI...'
                   ) : (
                     <>
                       Start Simulation
