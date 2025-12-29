@@ -53,13 +53,16 @@ interface AIAnalysisResult {
   }>;
 }
 
-const OPENAI_API_KEY = import.meta.env.PUBLIC_OPENAI_API_KEY;
-
-if (!OPENAI_API_KEY) {
-  console.warn('OpenAI API key not configured. AI features will be limited.');
+function getOpenAIKey(): string | undefined {
+  const key = import.meta.env.PUBLIC_OPENAI_API_KEY;
+  if (!key) {
+    console.warn('OpenAI API key not configured. AI features will be limited.');
+  }
+  return key;
 }
 
 async function analyzeCreativeWithVision(imageBase64: string, retailerContext: string, placementContext: string): Promise<AIAnalysisResult> {
+  const OPENAI_API_KEY = getOpenAIKey();
   if (!OPENAI_API_KEY) {
     return generateMockAnalysis();
   }
