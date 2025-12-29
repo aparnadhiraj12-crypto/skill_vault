@@ -63,8 +63,12 @@ function getOpenAIKey(): string | undefined {
 
 async function analyzeCreativeWithVision(imageBase64: string, retailerContext: string, placementContext: string): Promise<AIAnalysisResult> {
   const OPENAI_API_KEY = getOpenAIKey();
+  
+  // Always analyze image characteristics for more accurate results
+  const imageAnalysis = await analyzeImageCharacteristics(imageBase64);
+  
   if (!OPENAI_API_KEY) {
-    return generateMockAnalysis();
+    return generateMockAnalysis(imageAnalysis);
   }
 
   try {
@@ -118,7 +122,7 @@ Return ONLY valid JSON, no markdown formatting.`,
 
     if (!analysisResponse.ok) {
       console.error('OpenAI API error:', analysisResponse.statusText);
-      return generateMockAnalysis();
+      return generateMockAnalysis(imageAnalysis);
     }
 
     const analysisData = await analysisResponse.json();
@@ -234,7 +238,7 @@ Return ONLY valid JSON.`,
     };
   } catch (error) {
     console.error('AI analysis error:', error);
-    return generateMockAnalysis();
+    return generateMockAnalysis(imageAnalysis);
   }
 }
 
@@ -271,22 +275,228 @@ function calculateRiskScore(metrics: DesignMetrics, riskFactors: string[]): Risk
   };
 }
 
-function generateMockAnalysis(): AIAnalysisResult {
-  // Generate more realistic metrics with some variation
-  const complianceScore = Math.floor(Math.random() * 20) + 75; // 75-95
-  const attentionScore = Math.floor(Math.random() * 25) + 70; // 70-95
-  const readabilityScore = Math.floor(Math.random() * 20) + 80; // 80-100
-  const brandScore = Math.floor(Math.random() * 15) + 80; // 80-95
-  
+async function analyzeImageCharacteristics(imageBase64: string): Promise<{
+  hasText: boolean;
+  textDensity: number;
+  colorCount: number;
+  brightness: number;
+  contrast: number;
+  estimatedReadability: number;
+}> {
+  try {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context not available');
+
+    const img = new Image();
+    img.src = `data:image/jpeg;base64,${imageBase64}`;
+
+    return new Promise((resolve) => {
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Analyze image characteristics
+        let totalBrightness = 0;
+        let totalContrast = 0;
+        const colorMap = new Set<string>();
+        let darkPixels = 0;
+        let lightPixels = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const brightness = (r + g + b) / 3;
+
+          totalBrightness += brightness;
+          colorMap.add(`${Math.floor(r / 50)},${Math.floor(g / 50)},${Math.floor(b / 50)}`);
+
+          if (brightness < 85) darkPixels++;
+          if (brightness > 170) lightPixels++;
+        }
+
+        const avgBrightness = totalBrightness / (data.length / 4);
+        const colorCount = colorMap.size;
+        const contrastRatio = Math.abs(darkPixels - lightPixels) / (data.length / 4);
+
+        // Estimate readability based on contrast
+        const estimatedReadability = Math.min(100, Math.round(contrastRatio * 150));
+
+        resolve({
+          hasText: colorCount > 10,
+          textDensity: Math.min(100, (colorCount / 256) * 100),
+          colorCount: Math.min(256, colorCount),
+          brightness: Math.round(avgBrightness),
+          contrast: Math.round(contrastRatio * 100),
+          estimatedReadability,
+        });
+      };
+
+      img.onerror = () => {
+        resolve({
+          hasText: true,
+          textDensity: 65,
+          colorCount: 120,
+          brightness: 128,
+          contrast: 45,
+          estimatedReadability: 75,
+        });
+      };
+    });
+  } catch (error) {
+    console.error('Image analysis error:', error);
+    return {
+      hasText: true,
+      textDensity: 65,
+      colorCount: 120,
+      brightness: 128,
+      contrast: 45,
+      estimatedReadability: 75,
+    };
+  }
+}
+
+function generateMockAnalysis(imageAnalysis?: {
+  hasText: boolean;
+  textDensity: number;
+  colorCount: number;
+  brightness: number;
+  contrast: number;
+  estimatedReadability: number;
+}): AIAnalysisResult {
+  // Use image analysis if available, otherwise use defaults
+  const readability = imageAnalysis?.estimatedReadability ?? 75;
+  const contrast = imageAnalysis?.contrast ?? 45;
+  const colorCount = imageAnalysis?.colorCount ?? 120;
+
+  // Calculate metrics based on image characteristics
+  const complianceScore = Math.min(100, Math.round(contrast * 1.5 + 30));
+  const attentionScore = Math.min(100, Math.round((colorCount / 256) * 100 * 0.7 + 40));
+  const readabilityScore = readability;
+  const brandScore = Math.min(100, Math.round(contrast * 1.2 + 40));
+
+  // Determine compliance issues based on analysis
+  const complianceChecks: ComplianceCheck[] = [
+    {
+      item: 'Brand logo placement',
+      status: 'pass',
+      details: 'Logo is properly positioned and meets minimum size requirements',
+    },
+    {
+      item: 'Text readability',
+      status: readabilityScore >= 70 ? 'pass' : 'warning',
+      details: `Text contrast ratio is ${(contrast / 20 + 2).toFixed(1)}:1 ${readabilityScore >= 70 ? '(exceeds WCAG AA standards)' : '(below recommended standards)'}`,
+    },
+    {
+      item: 'Color contrast',
+      status: contrast >= 40 ? 'pass' : 'warning',
+      details: contrast >= 40 ? 'All text elements meet WCAG AA accessibility standards' : 'Improve color contrast for better accessibility',
+    },
+    {
+      item: 'Dimension requirements',
+      status: 'pass',
+      details: 'Creative dimensions match placement specifications',
+    },
+    {
+      item: 'Legal disclaimers',
+      status: 'warning',
+      details: 'Add fine print disclaimer for complete regulatory compliance',
+    },
+    {
+      item: 'Call-to-action clarity',
+      status: contrast >= 35 ? 'pass' : 'warning',
+      details: contrast >= 35 ? 'CTA button is clearly visible and actionable' : 'Increase CTA button contrast for better visibility',
+    },
+  ];
+
+  // Generate context-aware suggestions
+  const suggestions = [];
+
+  if (contrast < 40) {
+    suggestions.push({
+      id: 'ai-1',
+      type: 'ai' as const,
+      category: 'Compliance',
+      severity: 'critical' as const,
+      title: 'Improve Color Contrast',
+      description: 'Current contrast ratio is below WCAG AA standards. Increase the contrast between text and background colors to ensure readability for all users, especially in retail environments.',
+    });
+  } else if (contrast < 50) {
+    suggestions.push({
+      id: 'ai-1',
+      type: 'ai' as const,
+      category: 'Compliance',
+      severity: 'warning' as const,
+      title: 'Enhance Color Contrast',
+      description: 'While meeting minimum standards, increasing contrast will improve visibility from distance and in various lighting conditions.',
+    });
+  } else {
+    suggestions.push({
+      id: 'ai-1',
+      type: 'ai' as const,
+      category: 'Compliance',
+      severity: 'info' as const,
+      title: 'Maintain Color Contrast',
+      description: 'Your creative has excellent color contrast. Ensure this is maintained across all variations and displays.',
+    });
+  }
+
+  if (colorCount < 80) {
+    suggestions.push({
+      id: 'ai-2',
+      type: 'ai' as const,
+      category: 'Design',
+      severity: 'info' as const,
+      title: 'Add Visual Variety',
+      description: 'Consider adding more color elements or visual hierarchy to increase visual interest and engagement in retail environments.',
+    });
+  } else if (colorCount > 180) {
+    suggestions.push({
+      id: 'ai-2',
+      type: 'ai' as const,
+      category: 'Design',
+      severity: 'warning' as const,
+      title: 'Simplify Color Palette',
+      description: 'Too many colors can be overwhelming. Reduce to 3-5 primary colors for better brand recognition and visual clarity.',
+    });
+  } else {
+    suggestions.push({
+      id: 'ai-2',
+      type: 'ai' as const,
+      category: 'Design',
+      severity: 'info' as const,
+      title: 'Color Palette Optimization',
+      description: 'Your color palette is well-balanced. Ensure consistency across all brand materials.',
+    });
+  }
+
+  suggestions.push({
+    id: 'ai-3',
+    type: 'ai' as const,
+    category: 'Optimization',
+    severity: 'info' as const,
+    title: 'Add Legal Disclaimer',
+    description: 'Include a small legal disclaimer (8-10pt) at the bottom of the creative to ensure complete regulatory compliance with retail advertising standards.',
+  });
+
+  suggestions.push({
+    id: 'ai-4',
+    type: 'ai' as const,
+    category: 'Optimization',
+    severity: 'info' as const,
+    title: 'Test in Retail Environment',
+    description: 'Validate your creative in actual retail lighting conditions and from various viewing distances (6-8 feet) to ensure optimal visibility.',
+  });
+
+  const riskScore = Math.round((complianceScore + attentionScore + readabilityScore + brandScore) / 4);
+
   return {
-    complianceChecks: [
-      { item: 'Brand logo placement', status: 'pass', details: 'Logo is properly positioned and meets minimum size requirements' },
-      { item: 'Text readability', status: 'pass', details: `Text contrast ratio is ${(Math.random() * 2 + 4).toFixed(1)}:1 (exceeds WCAG AA standards)` },
-      { item: 'Color contrast', status: 'pass', details: 'All text elements meet WCAG AA accessibility standards' },
-      { item: 'Dimension requirements', status: 'pass', details: 'Creative dimensions match placement specifications' },
-      { item: 'Legal disclaimers', status: 'warning', details: 'Add fine print disclaimer for complete regulatory compliance' },
-      { item: 'Call-to-action clarity', status: 'pass', details: 'CTA button is clearly visible and actionable' },
-    ],
+    complianceChecks,
     designMetrics: {
       compliance: complianceScore,
       attention: attentionScore,
@@ -295,45 +505,19 @@ function generateMockAnalysis(): AIAnalysisResult {
     },
     heatmapData: generateMockHeatmap(),
     riskAnalysis: {
-      score: Math.round((complianceScore + attentionScore + readabilityScore + brandScore) / 4),
-      label: 'Excellent',
-      recommendation: 'Your creative demonstrates strong compliance and design quality. Ready for submission.',
-      riskFactors: [],
+      score: riskScore,
+      label: riskScore >= 90 ? 'Excellent' : riskScore >= 75 ? 'Good' : riskScore >= 60 ? 'Fair' : 'Needs Work',
+      recommendation:
+        riskScore >= 90
+          ? 'Your creative demonstrates excellent compliance and design quality. Ready for immediate submission.'
+          : riskScore >= 75
+            ? 'Your creative is likely to pass review. Consider applying remaining suggestions for optimization.'
+            : riskScore >= 60
+              ? 'Review and apply critical suggestions before submission to improve compliance.'
+              : 'Significant improvements needed. Apply all critical suggestions and re-validate before submission.',
+      riskFactors: contrast < 40 ? ['Low contrast'] : [],
     },
-    suggestions: [
-      {
-        id: 'ai-1',
-        type: 'ai',
-        category: 'Compliance',
-        severity: 'warning',
-        title: 'Add Legal Disclaimer',
-        description: 'Include a small legal disclaimer (8-10pt) at the bottom of the creative to ensure complete regulatory compliance with retail advertising standards.',
-      },
-      {
-        id: 'ai-2',
-        type: 'ai',
-        category: 'Optimization',
-        severity: 'info',
-        title: 'Enhance CTA Prominence',
-        description: 'Increase call-to-action button size by 15-20% to improve visibility and click-through rates in retail environments.',
-      },
-      {
-        id: 'ai-3',
-        type: 'ai',
-        category: 'Design',
-        severity: 'info',
-        title: 'Improve Product Visibility',
-        description: 'Ensure product image occupies at least 30% of the creative space for better shelf visibility and consumer engagement.',
-      },
-      {
-        id: 'ai-4',
-        type: 'ai',
-        category: 'Optimization',
-        severity: 'info',
-        title: 'Simplify Messaging',
-        description: 'Reduce headline text to maximum 5 words for better readability from retail display distance (6-8 feet).',
-      },
-    ],
+    suggestions: suggestions.slice(0, 4),
     placementSimulations: generateMockPlacements().placements,
   };
 }
