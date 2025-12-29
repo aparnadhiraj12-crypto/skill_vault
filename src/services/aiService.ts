@@ -272,25 +272,32 @@ function calculateRiskScore(metrics: DesignMetrics, riskFactors: string[]): Risk
 }
 
 function generateMockAnalysis(): AIAnalysisResult {
+  // Generate more realistic metrics with some variation
+  const complianceScore = Math.floor(Math.random() * 20) + 75; // 75-95
+  const attentionScore = Math.floor(Math.random() * 25) + 70; // 70-95
+  const readabilityScore = Math.floor(Math.random() * 20) + 80; // 80-100
+  const brandScore = Math.floor(Math.random() * 15) + 80; // 80-95
+  
   return {
     complianceChecks: [
-      { item: 'Brand logo placement', status: 'pass', details: 'Logo is properly positioned in top-left corner' },
-      { item: 'Text readability', status: 'pass', details: 'Text contrast ratio is 5.2:1 (exceeds WCAG AA)' },
-      { item: 'Color contrast', status: 'pass', details: 'All text meets minimum contrast requirements' },
-      { item: 'Dimension requirements', status: 'pass', details: 'Creative matches placement dimensions' },
-      { item: 'Legal disclaimers', status: 'warning', details: 'Consider adding terms and conditions' },
+      { item: 'Brand logo placement', status: 'pass', details: 'Logo is properly positioned and meets minimum size requirements' },
+      { item: 'Text readability', status: 'pass', details: `Text contrast ratio is ${(Math.random() * 2 + 4).toFixed(1)}:1 (exceeds WCAG AA standards)` },
+      { item: 'Color contrast', status: 'pass', details: 'All text elements meet WCAG AA accessibility standards' },
+      { item: 'Dimension requirements', status: 'pass', details: 'Creative dimensions match placement specifications' },
+      { item: 'Legal disclaimers', status: 'warning', details: 'Add fine print disclaimer for complete regulatory compliance' },
+      { item: 'Call-to-action clarity', status: 'pass', details: 'CTA button is clearly visible and actionable' },
     ],
     designMetrics: {
-      compliance: 92,
-      attention: 85,
-      readability: 88,
-      brandConsistency: 90,
+      compliance: complianceScore,
+      attention: attentionScore,
+      readability: readabilityScore,
+      brandConsistency: brandScore,
     },
     heatmapData: generateMockHeatmap(),
     riskAnalysis: {
-      score: 88,
+      score: Math.round((complianceScore + attentionScore + readabilityScore + brandScore) / 4),
       label: 'Excellent',
-      recommendation: 'Your creative is ready for submission with high confidence.',
+      recommendation: 'Your creative demonstrates strong compliance and design quality. Ready for submission.',
       riskFactors: [],
     },
     suggestions: [
@@ -298,9 +305,9 @@ function generateMockAnalysis(): AIAnalysisResult {
         id: 'ai-1',
         type: 'ai',
         category: 'Compliance',
-        severity: 'info',
+        severity: 'warning',
         title: 'Add Legal Disclaimer',
-        description: 'Consider adding a small legal disclaimer at the bottom for complete compliance.',
+        description: 'Include a small legal disclaimer (8-10pt) at the bottom of the creative to ensure complete regulatory compliance with retail advertising standards.',
       },
       {
         id: 'ai-2',
@@ -308,7 +315,23 @@ function generateMockAnalysis(): AIAnalysisResult {
         category: 'Optimization',
         severity: 'info',
         title: 'Enhance CTA Prominence',
-        description: 'The call-to-action could be slightly larger to improve click-through rates.',
+        description: 'Increase call-to-action button size by 15-20% to improve visibility and click-through rates in retail environments.',
+      },
+      {
+        id: 'ai-3',
+        type: 'ai',
+        category: 'Design',
+        severity: 'info',
+        title: 'Improve Product Visibility',
+        description: 'Ensure product image occupies at least 30% of the creative space for better shelf visibility and consumer engagement.',
+      },
+      {
+        id: 'ai-4',
+        type: 'ai',
+        category: 'Optimization',
+        severity: 'info',
+        title: 'Simplify Messaging',
+        description: 'Reduce headline text to maximum 5 words for better readability from retail display distance (6-8 feet).',
       },
     ],
     placementSimulations: generateMockPlacements().placements,
