@@ -40,7 +40,7 @@ const FEATURES: Feature[] = [
     description: 'Simulate how retail compliance teams will evaluate your creative against strict guidelines.',
     icon: Shield,
     color: 'text-brightblue',
-    image: 'https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=feature-retail-reviewer'
+    image: 'https://static.wixstatic.com/media/f9da0f_f6efb210645c421e8fb6d469b0a1acff~mv2.png'
   },
   {
     id: 'real-placement',
@@ -48,7 +48,7 @@ const FEATURES: Feature[] = [
     description: 'Preview your ad in actual retail placement contexts to ensure perfect visibility and fit.',
     icon: Zap,
     color: 'text-limegreen',
-    image: 'https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=feature-real-placement'
+    image: 'https://static.wixstatic.com/media/f9da0f_7bb39281cde34cb7b7c53ee40f09912b~mv2.png'
   },
   {
     id: 'attention-heatmap',
@@ -56,7 +56,7 @@ const FEATURES: Feature[] = [
     description: 'Visualize where viewers focus on your creative using predictive AI eye-tracking models.',
     icon: TrendingUp,
     color: 'text-pastelpink',
-    image: 'https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=feature-heatmap'
+    image: 'https://static.wixstatic.com/media/f9da0f_cd90549f094940b2a01ac15a15eda044~mv2.png'
   },
   {
     id: 'risk-score',
@@ -64,7 +64,7 @@ const FEATURES: Feature[] = [
     description: 'Get comprehensive confidence ratings and risk analysis before you hit submit.',
     icon: CheckCircle2,
     color: 'text-softgray',
-    image: 'https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=feature-risk-score'
+    image: 'https://static.wixstatic.com/media/f9da0f_2884db714564452ab7ffa8050f030252~mv2.png'
   },
 ];
 
@@ -287,7 +287,7 @@ export default function HomePage() {
                       SIMULATION_PREVIEW.JPG
                     </div>
                     <Image 
-                      src="https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=hero-preview" 
+                      src="https://static.wixstatic.com/media/f9da0f_dadcb3f4ec534f05847f2ace0d67fb39~mv2.png" 
                       alt="Simulation Preview" 
                       width={600} 
                       className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
@@ -367,7 +367,7 @@ export default function HomePage() {
                   REJECTED
                 </div>
                 <Image 
-                  src="https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=rejected-example-1" 
+                  src="https://static.wixstatic.com/media/f9da0f_89cad13e9c7c490bb930b8d483e45eb1~mv2.png" 
                   alt="Rejected Creative Example" 
                   width={800} 
                   className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 grayscale group-hover:grayscale-0"
@@ -383,7 +383,7 @@ export default function HomePage() {
                   REJECTED
                 </div>
                 <Image 
-                  src="https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=rejected-example-2" 
+                  src="https://static.wixstatic.com/media/f9da0f_ed58fc1ed67f4d79b01019c77a46368f~mv2.png" 
                   alt="Rejected Creative Example" 
                   width={800} 
                   className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500 grayscale group-hover:grayscale-0"
@@ -505,7 +505,7 @@ export default function HomePage() {
                     <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-white/50" />
                     
                     <Image 
-                      src={`https://static.wixstatic.com/media/12d367_71ebdd7141d041e4be3d91d80d4578dd~mv2.png?id=process-step-${index + 1}`}
+                      src={index === 0 ? 'https://static.wixstatic.com/media/f9da0f_f554c534afa6413f997caf81b7073681~mv2.png' : index === 1 ? 'https://static.wixstatic.com/media/f9da0f_90ba9cf68d1a4dc1ab0edb6649e73da1~mv2.png' : 'https://static.wixstatic.com/media/f9da0f_67832ba6008c452eb50e9bda06bc3e3f~mv2.png'}
                       alt={`Process Step ${step.step}`}
                       width={600}
                       className="w-full h-full object-cover opacity-80"
